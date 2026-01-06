@@ -71,3 +71,15 @@ def get_total_price():
 
     total_price = cart_service.get_total_price(user_id, session_id)
     return jsonify({"total_price": total_price}), 200
+
+@cart_bp.route('/save', methods=['POST'])
+def save_user_cart():
+    data = request.json
+    user_id = data.get('user_id')
+    session_id = data.get('session_id')
+
+    if not user_id or not session_id:
+        return jsonify({"message": "User ID and Session ID are required"}), 400
+
+    cart_service.save_user_cart(user_id, session_id)
+    return jsonify({"message": "Cart saved for user"}), 200
