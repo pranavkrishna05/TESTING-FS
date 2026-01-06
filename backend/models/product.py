@@ -7,14 +7,13 @@ class Product(BaseModel):
     name: str
     price: float
     description: str
-    category_id: int  # Add category_id field
-    is_deleted: bool = False  # Add a flag to mark product as deleted
+    category_id: int
+    is_deleted: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     @validator('name')
     def name_must_be_unique(cls, v: str) -> str:
-        # In an actual implementation, you would check the uniqueness against the database
         if not v:
             raise ValueError('Product name cannot be empty')
         return v
