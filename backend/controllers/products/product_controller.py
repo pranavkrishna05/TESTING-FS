@@ -59,3 +59,12 @@ def delete_product():
 def get_all_products():
     products = product_service.get_all_products()
     return jsonify([product.dict() for product in products]), 200
+
+@product_bp.route('/search', methods=['GET'])
+def search_products():
+    term = request.args.get('term', '')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+
+    products = product_service.search_products(term, page, per_page)
+    return jsonify([product.dict() for product in products]), 200
