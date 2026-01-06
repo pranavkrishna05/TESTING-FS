@@ -1,1 +1,0 @@
-backend/controllers/checkout/README.md

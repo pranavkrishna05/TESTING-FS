@@ -1,1 +1,0 @@
-backend/services/reviews/README.md

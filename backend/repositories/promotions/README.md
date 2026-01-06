@@ -1,1 +1,0 @@
-backend/repositories/promotions/README.md

@@ -1,1 +1,0 @@
-backend/tests/products/README.md

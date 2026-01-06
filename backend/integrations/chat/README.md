@@ -1,1 +1,0 @@
-backend/integrations/chat/README.md

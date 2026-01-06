@@ -1,1 +1,0 @@
-backend/controllers/promotions/README.md

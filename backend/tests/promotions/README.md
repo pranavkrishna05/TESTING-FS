@@ -1,1 +1,0 @@
-backend/tests/promotions/README.md
