@@ -43,6 +43,24 @@ def remove_item_from_cart():
         return jsonify({"message": "Item removed from cart", "total_price": total_price}), 200
     return jsonify({"message": "Item not found"}), 404
 
+@cart_bp.route('/update_quantity', methods=['POST'])
+def update_item_quantity():
+    data = request.json
+    cart_item_id = data.get('cart_item_id')
+    quantity = data.get('quantity')
+
+    if not cart_item_id or not quantity:
+        return jsonify({"message": "Cart Item ID and quantity are required"}), 400
+
+    if quantity <= 0:
+        return jsonify({"message": "Quantity must be a positive integer"}), 400
+
+    success = cart_service.update_item_quantity(cart_item_id, quantity)
+    if success:
+        total_price = cart_service.get_total_price(user_id=data.get('user_id'), session_id=data.get('session_id'))
+        return jsonify({"message": "Quantity updated", "total_price": total_price}), 200
+    return jsonify({"message": "Item not found"}), 404
+
 @cart_bp.route('/total', methods=['GET'])
 def get_total_price():
     user_id = request.args.get('user_id', type=int)
