@@ -1,6 +1,7 @@
 from flask import Flask
 from backend.controllers.auth.user_controller import user_bp
 from backend.controllers.products.product_controller import product_bp
+from backend.controllers.categories.category_controller import category_bp
 from backend.config.logging_config import setup_logging
 
 def create_app() -> Flask:
@@ -8,6 +9,7 @@ def create_app() -> Flask:
     setup_logging()
     app.register_blueprint(user_bp, url_prefix='/auth')
     app.register_blueprint(product_bp, url_prefix='/products')
+    app.register_blueprint(category_bp, url_prefix='/categories')
     return app
 
 if __name__ == '__main__':
