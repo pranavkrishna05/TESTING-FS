@@ -2,7 +2,7 @@ import logging
 import sys
 from datetime import datetime
 from typing import Any
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 from logging.config import dictConfig
 
 def configure_logging() -> None:
@@ -27,99 +27,140 @@ def configure_logging() -> None:
         }
     })
 
+USERS: dict[int, dict[str, Any]] = {}
 PRODUCTS: dict[int, dict[str, Any]] = {}
-CATEGORIES: dict[int, dict[str, Any]] = {}
-ADMIN_TOKENS = {"admin12345"}
+CARTS: dict[int, list[dict[str, Any]]] = {}
+USER_ID_COUNTER = 1
 PRODUCT_ID_COUNTER = 1
-CATEGORY_ID_COUNTER = 1
 
 def create_app() -> Flask:
     configure_logging()
     app = Flask(__name__)
+    app.secret_key = "supersecretkey"
 
     @app.route("/health", methods=["GET"])
     def health_check() -> Any:
         return jsonify({"status": "ok"}), 200
 
-    @app.route("/categories", methods=["POST"])
-    def create_category() -> Any:
-        nonlocal CATEGORY_ID_COUNTER
-        token = request.headers.get("X-Admin-Token")
-        if token not in ADMIN_TOKENS:
-            return jsonify({"error": "Unauthorized - Admin access required"}), 403
-
-        data = request.get_json(silent=True) or {}
-        name = data.get("name")
-        parent_id = data.get("parent_id")
-
-        if not name:
-            return jsonify({"error": "Category name is required"}), 400
-        if any(cat["name"].lower() == name.lower() for cat in CATEGORIES.values()):
-            return jsonify({"error": "Category name must be unique"}), 400
-        if parent_id and parent_id not in CATEGORIES:
-            return jsonify({"error": "Parent category not found"}), 400
-
-        CATEGORIES[CATEGORY_ID_COUNTER] = {
-            "id": CATEGORY_ID_COUNTER,
-            "name": name.lower(),
-            "parent_id": parent_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
-        }
-        app.logger.info("Category '%s' created successfully.", name)
-        CATEGORY_ID_COUNTER += 1
-        return jsonify({"message": "Category created successfully"}), 201
-
-    @app.route("/categories", methods=["GET"])
-    def list_categories() -> Any:
-        return jsonify(list(CATEGORIES.values())), 200
-
     @app.route("/products", methods=["POST"])
     def create_product() -> Any:
         nonlocal PRODUCT_ID_COUNTER
-        token = request.headers.get("X-Admin-Token")
-        if token not in ADMIN_TOKENS:
-            return jsonify({"error": "Unauthorized - Admin access required"}), 403
-
         data = request.get_json(silent=True) or {}
         name = data.get("name")
         price = data.get("price")
         description = data.get("description")
-        category_ids = data.get("category_ids")
 
         if not name or not description or price is None:
-            return jsonify({"error": "Name, description and price are required"}), 400
+            return jsonify({"error": "Name, description, and price are required"}), 400
         if not isinstance(price, (int, float)) or price <= 0:
-            return jsonify({"error": "Price must be numeric and greater than zero"}), 400
-        if not category_ids or not isinstance(category_ids, list) or len(category_ids) == 0:
-            return jsonify({"error": "At least one category is required"}), 400
-        for cid in category_ids:
-            if cid not in CATEGORIES:
-                return jsonify({"error": f"Invalid category ID: {cid}"}), 400
-        if any(prod["name"].lower() == name.lower() for prod in PRODUCTS.values()):
-            return jsonify({"error": "Product name must be unique"}), 400
+            return jsonify({"error": "Invalid price"}), 400
 
         PRODUCTS[PRODUCT_ID_COUNTER] = {
             "id": PRODUCT_ID_COUNTER,
             "name": name,
             "price": price,
             "description": description,
-            "category_ids": category_ids,
             "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
         }
-        app.logger.info("Product '%s' created with categories %s.", name, category_ids)
         PRODUCT_ID_COUNTER += 1
-        return jsonify({"message": "Product created successfully"}), 201
+        app.logger.info("Product '%s' created successfully.", name)
+        return jsonify({"message": "Product created"}), 201
 
-    @app.route("/products", methods=["GET"])
-    def list_products() -> Any:
-        data = []
-        for p in PRODUCTS.values():
-            categories = [CATEGORIES[cid]["name"] for cid in p["category_ids"] if cid in CATEGORIES]
-            item = {**p, "categories": categories}
-            data.append(item)
-        return jsonify(data), 200
+    @app.route("/users", methods=["POST"])
+    def create_user() -> Any:
+        nonlocal USER_ID_COUNTER
+        data = request.get_json(silent=True) or {}
+        username = data.get("username")
+        if not username:
+            return jsonify({"error": "Username required"}), 400
+        if any(u["username"] == username for u in USERS.values()):
+            return jsonify({"error": "Username already exists"}), 400
+        user = {
+            "id": USER_ID_COUNTER,
+            "username": username,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        USERS[USER_ID_COUNTER] = user
+        CARTS[USER_ID_COUNTER] = []
+        USER_ID_COUNTER += 1
+        return jsonify({"message": "User created", "user": user}), 201
+
+    @app.route("/cart/add", methods=["POST"])
+    def add_to_cart() -> Any:
+        data = request.get_json(silent=True) or {}
+        product_id = data.get("product_id")
+        quantity = data.get("quantity", 1)
+        user_id = session.get("user_id")
+
+        if product_id not in PRODUCTS:
+            return jsonify({"error": "Invalid product ID"}), 400
+        if not isinstance(quantity, int) or quantity <= 0:
+            return jsonify({"error": "Quantity must be a positive integer"}), 400
+
+        if not user_id:
+            cart = session.get("guest_cart", [])
+            existing_item = next((item for item in cart if item["product_id"] == product_id), None)
+            if existing_item:
+                existing_item["quantity"] += quantity
+            else:
+                cart.append({"product_id": product_id, "quantity": quantity})
+            session["guest_cart"] = cart
+            app.logger.info("Guest added product %s to cart.", product_id)
+            return jsonify({"message": "Product added to guest cart"}), 200
+
+        user_cart = CARTS.setdefault(user_id, [])
+        existing_item = next((item for item in user_cart if item["product_id"] == product_id), None)
+        if existing_item:
+            existing_item["quantity"] += quantity
+        else:
+            user_cart.append({"product_id": product_id, "quantity": quantity})
+        CARTS[user_id] = user_cart
+
+        app.logger.info("User %s added product %s to cart.", user_id, product_id)
+        return jsonify({"message": "Product added to user's cart"}), 200
+
+    @app.route("/cart", methods=["GET"])
+    def view_cart() -> Any:
+        user_id = session.get("user_id")
+        if user_id:
+            cart = CARTS.get(user_id, [])
+        else:
+            cart = session.get("guest_cart", [])
+        detailed_cart = []
+        for item in cart:
+            product = PRODUCTS.get(item["product_id"])
+            if product:
+                detailed_cart.append({
+                    "product_id": product["id"],
+                    "name": product["name"],
+                    "price": product["price"],
+                    "quantity": item["quantity"],
+                    "total": product["price"] * item["quantity"]
+                })
+        return jsonify(detailed_cart), 200
+
+    @app.route("/login/<int:user_id>", methods=["POST"])
+    def login(user_id: int) -> Any:
+        if user_id not in USERS:
+            return jsonify({"error": "Invalid user id"}), 400
+        session["user_id"] = user_id
+        guest_cart = session.pop("guest_cart", [])
+        if guest_cart:
+            user_cart = CARTS.setdefault(user_id, [])
+            for item in guest_cart:
+                existing_item = next((i for i in user_cart if i["product_id"] == item["product_id"]), None)
+                if existing_item:
+                    existing_item["quantity"] += item["quantity"]
+                else:
+                    user_cart.append(item)
+            CARTS[user_id] = user_cart
+        return jsonify({"message": f"User {user_id} logged in successfully."}), 200
+
+    @app.route("/logout", methods=["POST"])
+    def logout() -> Any:
+        session.pop("user_id", None)
+        app.logger.info("User logged out successfully.")
+        return jsonify({"message": "User logged out successfully"}), 200
 
     @app.errorhandler(Exception)
     def handle_exception(e: Exception) -> Any:
