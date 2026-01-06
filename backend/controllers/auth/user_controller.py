@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from backend.services.auth.user_service import UserService
+from backend.models.user import User
 
 user_bp = Blueprint('user', __name__)
 user_service = UserService()
@@ -50,3 +51,11 @@ def reset_password():
     if user_service.reset_password(token, new_password):
         return jsonify({"message": "Password reset successfully"}), 200
     return jsonify({"message": "Invalid or expired token"}), 400
+
+@user_bp.route('/update_profile', methods=['POST'])
+def update_profile():
+    data = request.json
+    user = User(**data)
+
+    user_service.update_user_profile(user)
+    return jsonify({"message": "User profile updated successfully"}), 200
