@@ -58,3 +58,14 @@ class ProductRepository:
         cursor.execute(query)
         rows = cursor.fetchall()
         return [Product(id=row[0], name=row[1], price=row[2], description=row[3], category=row[4], is_deleted=row[5], created_at=row[6], updated_at=row[7]) for row in rows]
+
+    def search_products(self, term: str, limit: int, offset: int) -> List[Product]:
+        query = """
+        SELECT * FROM products
+        WHERE (name LIKE :term OR description LIKE :term OR category LIKE :term) AND is_deleted = FALSE
+        LIMIT :limit OFFSET :offset;
+        """
+        cursor = self.db.cursor()
+        cursor.execute(query, {"term": f"%{term}%", "limit": limit, "offset": offset})
+        rows = cursor.fetchall()
+        return [Product(id=row[0], name=row[1], price=row[2], description=row[3], category=row[4], is_deleted=row[5], created_at=row[6], updated_at=row[7]) for row in rows]
