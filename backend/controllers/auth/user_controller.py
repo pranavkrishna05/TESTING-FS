@@ -29,3 +29,24 @@ def login():
         user_service.handle_failed_login(user)
     
     return jsonify({"message": "Invalid email or password"}), 401
+
+@user_bp.route('/password_reset', methods=['POST'])
+def password_reset():
+    data = request.json
+    email = data.get('email')
+
+    password_reset = user_service.create_password_reset(email)
+    if password_reset:
+        # Here would be the place to send the reset token via email
+        return jsonify({"message": "Password reset email sent", "token": password_reset.token}), 200
+    return jsonify({"message": "User not found"}), 404
+
+@user_bp.route('/reset_password', methods=['POST'])
+def reset_password():
+    data = request.json
+    token = data.get('token')
+    new_password = data.get('new_password')
+
+    if user_service.reset_password(token, new_password):
+        return jsonify({"message": "Password reset successfully"}), 200
+    return jsonify({"message": "Invalid or expired token"}), 400
