@@ -7,7 +7,7 @@ class Product(BaseModel):
     name: str
     price: float
     description: str
-    category: Optional[str] = None
+    category_id: int  # Add category_id field
     is_deleted: bool = False  # Add a flag to mark product as deleted
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
