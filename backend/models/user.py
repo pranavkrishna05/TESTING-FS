@@ -6,6 +6,10 @@ class User(BaseModel):
     id: Optional[int] = None
     email: EmailStr
     password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
     login_attempts: int = 0
     is_locked: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
