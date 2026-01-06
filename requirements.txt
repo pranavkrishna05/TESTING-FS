@@ -1,4 +1,0 @@
-flask==3.0.3
-typing-extensions==4.12.2
-werkzeug==3.0.3
-logging-config==0.5.1.2
