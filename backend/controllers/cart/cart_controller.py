@@ -39,5 +39,17 @@ def remove_item_from_cart():
 
     success = cart_service.remove_item_from_cart(cart_item_id)
     if success:
-        return jsonify({"message": "Item removed from cart"}), 200
+        total_price = cart_service.get_total_price(user_id=data.get('user_id'), session_id=data.get('session_id'))
+        return jsonify({"message": "Item removed from cart", "total_price": total_price}), 200
     return jsonify({"message": "Item not found"}), 404
+
+@cart_bp.route('/total', methods=['GET'])
+def get_total_price():
+    user_id = request.args.get('user_id', type=int)
+    session_id = request.args.get('session_id', type=str)
+
+    if not user_id and not session_id:
+        return jsonify({"message": "User ID or Session ID is required"}), 400
+
+    total_price = cart_service.get_total_price(user_id, session_id)
+    return jsonify({"total_price": total_price}), 200
