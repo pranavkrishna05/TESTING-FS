@@ -3,6 +3,7 @@ import sys
 from typing import Any
 from flask import Flask, jsonify, request
 from logging.config import dictConfig
+from datetime import datetime, timedelta
 
 def configure_logging() -> None:
     dictConfig({
@@ -26,6 +27,12 @@ def configure_logging() -> None:
         }
     })
 
+FAILED_ATTEMPTS: dict[str, int] = {}
+LAST_LOGIN: dict[str, datetime] = {}
+SESSION_EXPIRY: dict[str, datetime] = {}
+MAX_ATTEMPTS = 5
+SESSION_TIMEOUT_MINUTES = 30
+
 def create_app() -> Flask:
     configure_logging()
     app = Flask(__name__)
@@ -34,23 +41,46 @@ def create_app() -> Flask:
     def health_check() -> Any:
         return jsonify({"status": "ok"}), 200
 
-    @app.route("/register", methods=["POST"])
-    def register_user() -> Any:
+    @app.route("/login", methods=["POST"])
+    def login_user() -> Any:
         data = request.get_json(silent=True) or {}
         email = data.get("email")
         password = data.get("password")
 
         if not email or not password:
-            app.logger.warning("Missing email or password during registration.")
+            app.logger.warning("Missing email or password during login.")
             return jsonify({"error": "Email and password are required"}), 400
 
-        # Enforcing a basic password policy
-        if len(password) < 8 or password.isalpha() or password.isnumeric():
-            app.logger.warning("Weak password attempt for email %s", email)
-            return jsonify({"error": "Password must be at least 8 characters and contain letters and numbers"}), 400
+        if FAILED_ATTEMPTS.get(email, 0) >= MAX_ATTEMPTS:
+            app.logger.warning("Account locked due to excessive failed attempts for %s", email)
+            return jsonify({"error": "Account locked due to too many failed attempts"}), 403
 
-        app.logger.info("User registered successfully with email %s", email)
-        return jsonify({"message": "User registered successfully"}), 201
+        # Dummy validation for demonstration
+        if password != "securePassword123":
+            FAILED_ATTEMPTS[email] = FAILED_ATTEMPTS.get(email, 0) + 1
+            remaining = MAX_ATTEMPTS - FAILED_ATTEMPTS[email]
+            app.logger.info("Invalid login attempt for %s, %d attempts left", email, remaining)
+            return jsonify({"error": f"Invalid credentials. {remaining} attempts remaining"}), 401
+
+        FAILED_ATTEMPTS.pop(email, None)
+        LAST_LOGIN[email] = datetime.utcnow()
+        SESSION_EXPIRY[email] = datetime.utcnow() + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+        app.logger.info("User %s logged in successfully", email)
+        return jsonify({
+            "message": "Login successful",
+            "session_expires_at": SESSION_EXPIRY[email].isoformat()
+        }), 200
+
+    @app.route("/session", methods=["GET"])
+    def session_status() -> Any:
+        email = request.args.get("email")
+        if not email or email not in SESSION_EXPIRY:
+            return jsonify({"error": "Invalid session"}), 401
+        if datetime.utcnow() > SESSION_EXPIRY[email]:
+            SESSION_EXPIRY.pop(email)
+            app.logger.info("Session expired for %s", email)
+            return jsonify({"error": "Session expired"}), 403
+        return jsonify({"message": "Session active"}), 200
 
     @app.errorhandler(Exception)
     def handle_exception(e: Exception) -> Any:
