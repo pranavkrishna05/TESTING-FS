@@ -1,0 +1,13 @@
+from flask import Flask
+from backend.controllers.auth.user_controller import user_bp
+from backend.config.logging_config import setup_logging
+
+def create_app() -> Flask:
+    app = Flask(__name__)
+    setup_logging()
+    app.register_blueprint(user_bp, url_prefix='/auth')
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(host='0.0.0.0', port=5000)
