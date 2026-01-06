@@ -32,6 +32,13 @@ class ShoppingCartRepository:
         rows = cursor.fetchall()
         return [ShoppingCart(id=row[0], user_id=row[1], session_id=row[2], product_id=row[3], quantity=row[4], added_at=row[5]) for row in rows]
 
+    def update_item_quantity(self, cart_item_id: int, quantity: int) -> bool:
+        query = "UPDATE shopping_cart SET quantity = :quantity WHERE id = :id;"
+        cursor = self.db.cursor()
+        cursor.execute(query, {"quantity": quantity, "id": cart_item_id})
+        self.db.commit()
+        return cursor.rowcount > 0
+
     def remove_item(self, cart_item_id: int) -> bool:
         query = "DELETE FROM shopping_cart WHERE id = :id;"
         cursor = self.db.cursor()
