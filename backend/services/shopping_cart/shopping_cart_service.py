@@ -20,6 +20,9 @@ class ShoppingCartService:
             return self.shopping_cart_repository.get_items_by_session_id(session_id)
         return []
 
+    def update_item_quantity(self, cart_item_id: int, quantity: int) -> bool:
+        return self.shopping_cart_repository.update_item_quantity(cart_item_id, quantity)
+
     def remove_item_from_cart(self, cart_item_id: int) -> bool:
         return self.shopping_cart_repository.remove_item(cart_item_id)
 
