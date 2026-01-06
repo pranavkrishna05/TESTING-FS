@@ -6,7 +6,8 @@ class User(BaseModel):
     id: Optional[int] = None
     email: EmailStr
     password: str
-    is_active: bool = True
+    login_attempts: int = 0
+    is_locked: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
