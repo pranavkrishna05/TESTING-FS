@@ -26,3 +26,21 @@ class ProductRepository:
         if row:
             return Product(id=row[0], name=row[1], price=row[2], description=row[3], category=row[4], created_at=row[5], updated_at=row[6])
         return None
+
+    def update_product(self, product: Product) -> None:
+        query = """
+        UPDATE products SET name = :name, price = :price, description = :description, category = :category, updated_at = :updated_at
+        WHERE id = :id;
+        """
+        cursor = self.db.cursor()
+        cursor.execute(query, product.dict())
+        self.db.commit()
+
+    def get_product_by_id(self, product_id: int) -> Optional<Product]:
+        query = "SELECT * FROM products WHERE id = :id;"
+        cursor = self.db.cursor()
+        cursor.execute(query, {"id": product_id})
+        row = cursor.fetchone()
+        if row:
+            return Product(id=row[0], name=row[1], price=row[2], description=row[3], category=row[4], created_at=row[5], updated_at=row[6])
+        return None
