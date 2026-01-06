@@ -33,3 +33,9 @@ class ShoppingCartService:
             product = self.product_repository.get_product_by_id(item.product_id)
             total_price += product.price * item.quantity
         return total_price
+
+    def save_user_cart(self, user_id: int, session_id: str) -> None:
+        items = self.shopping_cart_repository.get_items_by_session_id(session_id)
+        for item in items:
+            item.user_id = user_id
+            self.shopping_cart_repository.add_item(item)  # This should update user_id in the database
