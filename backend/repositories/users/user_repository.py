@@ -1,4 +1,5 @@
 from backend.models.users.user import User
+from backend import db
 
 class UserRepository:
     @staticmethod
