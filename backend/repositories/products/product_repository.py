@@ -1,5 +1,6 @@
 from backend.models.products.product import Product
 from backend import db
+from sqlalchemy import or_
 
 class ProductRepository:
     @staticmethod
@@ -19,3 +20,14 @@ class ProductRepository:
     def delete(product: Product) -> None:
         db.session.delete(product)
         db.session.commit()
+
+    @staticmethod
+    def search(query: str, page: int, per_page: int):
+        search_query = f"%{query}%"
+        products = Product.query.filter(
+            or_(
+                Product.name.ilike(search_query),
+                Product.description.ilike(search_query)
+            )
+        ).paginate(page, per_page, error_out=False)
+        return products.items, products.total
