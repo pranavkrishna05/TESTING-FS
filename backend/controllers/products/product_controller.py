@@ -79,3 +79,29 @@ def delete_product(product_id):
     db.session.commit()
 
     return jsonify({'message': 'Product deleted successfully'}), 200
+
+@products.route('/search', methods=['GET'])
+def search_products():
+    query = request.args.get('query')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    products, total = ProductRepository.search(query, page, per_page)
+    
+    result = []
+    for product in products:
+        result.append({
+            'id': product.id,
+            'name': product.name,
+            'price': product.price,
+            'description': product.description,
+            'created_at': product.created_at,
+            'updated_at': product.updated_at
+        })
+
+    return jsonify({
+        'products': result,
+        'total': total,
+        'page': page,
+        'per_page': per_page
+    }), 200
