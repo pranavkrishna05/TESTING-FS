@@ -7,6 +7,10 @@ class UserRepository:
         return User.query.filter_by(email=email).first()
 
     @staticmethod
+    def find_by_id(user_id: int) -> User:
+        return User.query.get(user_id)
+
+    @staticmethod
     def save(user: User) -> None:
         db.session.add(user)
         db.session.commit()
