@@ -14,3 +14,8 @@ class ProductRepository:
     def save(product: Product) -> None:
         db.session.add(product)
         db.session.commit()
+
+    @staticmethod
+    def delete(product: Product) -> None:
+        db.session.delete(product)
+        db.session.commit()
