@@ -1,1 +1,0 @@
-backend/integrations/shipping/README.md

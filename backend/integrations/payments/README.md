@@ -1,1 +1,0 @@
-backend/integrations/payments/README.md

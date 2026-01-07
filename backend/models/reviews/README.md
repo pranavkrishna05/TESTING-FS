@@ -1,1 +1,0 @@
-backend/models/reviews/README.md
